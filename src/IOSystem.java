@@ -1,3 +1,7 @@
+import java.io.File;
+import java.io.IOException;
+import java.io.PrintStream;
+
 
 public class IOSystem {
 	
@@ -5,23 +9,46 @@ public class IOSystem {
 	private static String studentID = "90121402";
 	private static String uciNetID = "BTero";
 	
+	private static File outFile;
+	private static PrintStream fileData;
+	
+	private static final int L = 64;
+	private static final int B = 64;
+	private static byte[][] ldisk;
+	
 	public void IOSystem(){
+		this.ldisk = new byte[L][B];
 		
+		// initialize disk to all zeros
+		reset();
 	}
 	
-	public void read_block(int i){
-		
+	public byte[] read_block(int i){
+		return ldisk[i];
 	}
 	
-	public void write_block(int i ){
-		
+	public void write_block(int i, byte[] data){
+		for(int j = 0; j < B; j++){
+			ldisk[i][j] = data[j];
+		}
 	}
 	
 	public void reset(){
-		
+		for(int i = 0; i < L; i++){
+			for(int j = 0; j < B; j++){
+				ldisk[i][j]	= 0;
+			}
+		}
 	}
 	
-	public void save(){
-		
+	public void save(String out) throws IOException{
+		outFile = new File(out);
+		fileData = new PrintStream(outFile);
+		for(int i = 0; i < L; i++){
+			for(int j = 0; j < B; j++){
+				fileData.printf("%s ", ldisk[i][j]);
+			}
+			fileData.println();
+		}
 	}
 }
