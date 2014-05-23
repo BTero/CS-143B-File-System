@@ -9,17 +9,17 @@ public class Manager {
 	private class OFT{
 
 		private static final int maxSize = 4;
-		public void OFT(){
+		public OFT(){
 
 		}
 
 
 	}
 
-	public void Manager(){
+	public Manager(){
 
 	}
-
+	
 	public void create(){
 
 	}
