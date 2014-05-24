@@ -114,47 +114,47 @@ public class Shell {
 	}
 
 	public void init(String restoreFile){
-		
+		m = new Manager(restoreFile);
 	}
 	
 	public void init(){
-		
+		m = new Manager();
 	}
 
 	public void create(String name){
-
+		m.create(name);
 	}
 
 	public void delete(String name){
-
+		m.delete(name);
 	}
 
 	public void open(String name){
-
+		m.open(name);
 	}
 
 	public void close(String name){
-
+		m.close(name);
 	}
 
 	public void read(int index, int count){
-
+		m.read(index, count);
 	}
 
 	public void write(int index, String c, int count){
 		// convert string to byte version before passing to manager
-
+		m.write(index, c.getBytes()[0], count);
 	}
 
 	public void seek(int index, int pos){
-
+		m.seek(index, pos);
 	}
 
 	public void directory(){
-
+		m.directory();
 	}
 
 	public void save(String fileName){
-
+		m.save(fileName);
 	}
 }
