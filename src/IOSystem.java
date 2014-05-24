@@ -19,11 +19,50 @@ public class IOSystem {
 	private static final int B = 64;
 	private static byte[][] ldisk;
 
-	public void IOSystem(){
+	public IOSystem(){
 		this.ldisk = new byte[L][B];
 
 		// initialize disk to all zeros
 		reset();
+
+		// reserve blocks used for file descriptors
+		for(int i = 0; i < 8; i++){
+			ldisk[0][i] = 1;
+		}
+	}
+
+	public IOSystem(String inFile){
+		this.ldisk = new byte[L][B];
+
+		// initialize disk to all zeros
+		reset();
+
+		// restore previous IOSystem
+		try {
+			BufferedReader br = new BufferedReader(new FileReader(inFile));
+
+			String line = br.readLine();
+			int i = 0;
+			while(!line.isEmpty()){
+
+				// form string back to original format based on ldisk
+				String[] s = line.split(" ");
+				String fullLine = "";
+				for(int k = 0; k < s.length; k++){
+					fullLine += s[k];
+				}
+
+				// restore line back into ldisk
+
+				for(int j = 0; j < B; j++){
+					ldisk[i][j] = fullLine.getBytes()[j];
+				}
+				i++;
+			}
+			br.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
 	public byte[] read_block(int i){
@@ -54,59 +93,6 @@ public class IOSystem {
 			fileData.print("\n");
 		}
 	}
-
-	public void restore(String inFile){
-
-		try {
-			BufferedReader br = new BufferedReader(new FileReader(inFile));
-
-			String line = br.readLine();
-			int i = 0;
-			while(!line.isEmpty()){
-
-				// form string back to original format based on ldisk
-				String[] s = line.split(" ");
-				String fullLine = "";
-				for(int k = 0; k < s.length; k++){
-					fullLine += s[k];
-				}
-
-				// restore line back into ldisk
-
-				for(int j = 0; j < B; j++){
-					ldisk[i][j] = fullLine.getBytes()[j];
-				}
-				i++;
-			}
-			br.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
-
-	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
