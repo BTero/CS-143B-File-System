@@ -20,31 +20,35 @@ public class Manager {
 
 	}
 	
-	public void create(){
+	public Manager(String restoreFile){
+		
+	}
+	
+	public void create(String name){
 
 	}
 
-	public void delete(){
+	public void delete(String name){
 
 	}
 
-	public void open(){
+	public void open(String name){
 
 	}
 
-	public void close(){
+	public void close(String name){
 
 	}
 
-	public void read(){
+	public void read(int index, int count){
 
 	}
 
-	public void write(){
+	public void write(int index, byte c, int count){
 
 	}
 
-	public void seek(){
+	public void seek(int index, int pos){
 
 	}
 
@@ -52,7 +56,7 @@ public class Manager {
 
 	}
 
-	public void save(){
+	public void save(String fileName){
 
 	}
 }
