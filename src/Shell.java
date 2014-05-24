@@ -13,7 +13,6 @@ public class Shell {
 	private static String uciNetID = "BTero";
 	
 	public static BufferedReader br;
-//	public static FileOutputStream outFile;
 	private static PrintStream fileData;
 	private static File outFile;
 	
@@ -39,42 +38,115 @@ public class Shell {
 			outFile = new File("D:\\" + studentID + ".txt");
 //			file = new File("F:\\" + studentID + ".txt");
 			fileData = new PrintStream(outFile);
-
+			
+			String line = br.readLine();
+			while(!line.isEmpty()){
+				String[] s = line.split(" ");
+				if(s[0].equalsIgnoreCase("in")){
+					if(s.length == 2){
+						// restore
+						init(s[1]);
+					}else{
+						// initialize
+						init();
+					}
+				}else if(s[0].equalsIgnoreCase("cr")){
+					if(s.length == 2){
+						create(s[1]);
+					}else{
+						fileData.println("File creation resulted in error.");
+					}
+				}else if(s[0].equalsIgnoreCase("de")){
+					if(s.length == 2){
+						delete(s[1]);
+					}else{
+						fileData.println("File deletion resulted in error.");
+					}
+				}else if(s[0].equalsIgnoreCase("op")){
+					if(s.length == 2){
+						open(s[1]);
+					}else{
+						fileData.println("File could not be opened.");
+					}
+				}else if(s[0].equalsIgnoreCase("cl")){
+					if(s.length == 2){
+						close(s[1]);
+					}else{
+						fileData.println("File could not be closed.");
+					}
+				}else if(s[0].equalsIgnoreCase("rd")){
+					if(s.length == 3){
+						read(Integer.parseInt(s[1]), Integer.parseInt(s[2]));
+					}else{
+						fileData.println("File read resulted in error.");
+					}
+				}else if(s[0].equalsIgnoreCase("wr")){
+					if(s.length == 4){
+						write(Integer.parseInt(s[1]), s[2], Integer.parseInt(s[3]));
+					}else{
+						fileData.println("File write resulted in error.");
+					}
+				}else if(s[0].equalsIgnoreCase("sk")){
+					if(s.length == 3){
+						seek(Integer.parseInt(s[1]), Integer. parseInt(s[2]));
+					}else{
+						fileData.println("File seek resulted in error.");
+					}
+				}else if(s[0].equalsIgnoreCase("dr")){
+					directory();
+				}else if(s[0].equalsIgnoreCase("sv")){
+					if(s.length == 2){
+						save(s[1]);
+					}else{
+						fileData.println("File save resulted in error.");
+					}
+				}else{
+					fileData.println("Incorrect Command. Enter valid Command.");
+				}
+				
+			}
+			
+			br.close();
 		}catch(IOException e){
 			e.printStackTrace();
 			System.exit(-2);
 		}
 	}
 
+	public void init(String restoreFile){
+		
+	}
+	
 	public void init(){
+		
+	}
+
+	public void create(String name){
 
 	}
 
-	public void create(){
+	public void delete(String name){
 
 	}
 
-	public void delete(){
+	public void open(String name){
 
 	}
 
-	public void open(){
+	public void close(String name){
 
 	}
 
-	public void close(){
+	public void read(int index, int count){
 
 	}
 
-	public void read(){
+	public void write(int index, String c, int count){
+		// convert string to byte version before passing to manager
 
 	}
 
-	public void write(){
-
-	}
-
-	public void seek(){
+	public void seek(int index, int pos){
 
 	}
 
@@ -82,7 +154,7 @@ public class Shell {
 
 	}
 
-	public void save(){
+	public void save(String fileName){
 
 	}
 }
