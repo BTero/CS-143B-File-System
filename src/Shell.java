@@ -3,6 +3,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.PrintStream;
 
 
@@ -28,6 +29,80 @@ public class Shell {
 		}else{
 			// parse from console
 			// For testing purposes. To be able to test individual functions for correctness
+			BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+	        System.out.print("Enter Commands");
+	        try {
+	        	String line = br.readLine();
+	        	String[] s = line.split(" ");
+				if(s[0].equalsIgnoreCase("in")){
+					if(s.length == 2){
+						// restore
+						init(s[1]);
+					}else{
+						// initialize
+						init();
+					}
+				}else if(s[0].equalsIgnoreCase("cr")){
+					if(s.length == 2){
+						create(s[1]);
+					}else{
+						fileData.println("File creation resulted in error.");
+					}
+				}else if(s[0].equalsIgnoreCase("de")){
+					if(s.length == 2){
+						delete(s[1]);
+					}else{
+						fileData.println("File deletion resulted in error.");
+					}
+				}else if(s[0].equalsIgnoreCase("op")){
+					if(s.length == 2){
+						open(s[1]);
+					}else{
+						fileData.println("File could not be opened.");
+					}
+				}else if(s[0].equalsIgnoreCase("cl")){
+					if(s.length == 2){
+						close(s[1]);
+					}else{
+						fileData.println("File could not be closed.");
+					}
+				}else if(s[0].equalsIgnoreCase("rd")){
+					if(s.length == 3){
+						read(Integer.parseInt(s[1]), Integer.parseInt(s[2]));
+					}else{
+						fileData.println("File read resulted in error.");
+					}
+				}else if(s[0].equalsIgnoreCase("wr")){
+					if(s.length == 4){
+						write(Integer.parseInt(s[1]), s[2], Integer.parseInt(s[3]));
+					}else{
+						fileData.println("File write resulted in error.");
+					}
+				}else if(s[0].equalsIgnoreCase("sk")){
+					if(s.length == 3){
+						seek(Integer.parseInt(s[1]), Integer. parseInt(s[2]));
+					}else{
+						fileData.println("File seek resulted in error.");
+					}
+				}else if(s[0].equalsIgnoreCase("dr")){
+					directory();
+				}else if(s[0].equalsIgnoreCase("sv")){
+					if(s.length == 2){
+						save(s[1]);
+					}else{
+						fileData.println("File save resulted in error.");
+					}
+				}else if(s[0].equals("exit")){
+					br.close();
+					System.exit(0);
+				}else{
+					fileData.println("Incorrect Command. Enter valid Command.");
+				}
+				
+			} catch (IOException e) {
+				e.printStackTrace();
+	            System.err.println("Invalid Format!");
+			}
 		}
 	}
 	
