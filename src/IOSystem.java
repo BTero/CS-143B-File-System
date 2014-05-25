@@ -17,22 +17,22 @@ public class IOSystem {
 
 	private static final int L = 64;
 	private static final int B = 64;
-	private static byte[][] ldisk;
+	private static char[][] ldisk;
 
 	public IOSystem(){
-		this.ldisk = new byte[L][B];
+		this.ldisk = new char[L][B];
 
 		// initialize disk to all zeros
 		reset();
 
 		// reserve blocks used for file descriptors
 		for(int i = 0; i < 8; i++){
-			ldisk[0][i] = 1;
+			ldisk[0][i] = '1';
 		}
 	}
 
 	public IOSystem(String inFile){
-		this.ldisk = new byte[L][B];
+		this.ldisk = new char[L][B];
 
 		// initialize disk to all zeros
 		reset();
@@ -42,22 +42,23 @@ public class IOSystem {
 			BufferedReader br = new BufferedReader(new FileReader(inFile));
 
 			String line = br.readLine();
-			int i = 0;
-			while(!line.isEmpty()){
-
+			for(int i = 0; i < L; i++){
 				// form string back to original format based on ldisk
 				String[] s = line.split(" ");
-				String fullLine = "";
+				
 				for(int k = 0; k < s.length; k++){
-					fullLine += s[k];
+					ldisk[i][k] = s[k].charAt(0);
 				}
-
-				// restore line back into ldisk
-
-				for(int j = 0; j < B; j++){
-					ldisk[i][j] = fullLine.getBytes()[j];
-				}
-				i++;
+//				String fullLine = "";
+//				for(int k = 0; k < s.length; k++){
+//					fullLine += s[k];
+//				}
+//
+//				// restore line back into ldisk
+//
+//				for(int j = 0; j < B; j++){
+//					ldisk[i][j] = fullLine.getBytes()[j];
+//				}
 			}
 			br.close();
 		} catch (IOException e) {
@@ -65,11 +66,11 @@ public class IOSystem {
 		}
 	}
 
-	public byte[] read_block(int i){
+	public char[] read_block(int i){
 		return ldisk[i];
 	}
 
-	public void write_block(int i, byte[] data){
+	public void write_block(int i, char[] data){
 		for(int j = 0; j < B; j++){
 			ldisk[i][j] = data[j];
 		}
@@ -78,20 +79,25 @@ public class IOSystem {
 	public void reset(){
 		for(int i = 0; i < L; i++){
 			for(int j = 0; j < B; j++){
-				ldisk[i][j]	= 0;
+				ldisk[i][j]	= '0';
 			}
 		}
 	}
 
-	public void save(String out) throws IOException{
-		outFile = new File(out);
-		fileData = new PrintStream(outFile);
-		for(int i = 0; i < L; i++){
-			for(int j = 0; j < B; j++){
-				fileData.printf("%s ", ldisk[i][j]);
+	public void save(String out){
+		try{
+			outFile = new File(out);
+			fileData = new PrintStream(outFile);
+			for(int i = 0; i < L; i++){
+				for(int j = 0; j < B; j++){
+					fileData.printf("%s ", ldisk[i][j]);
+				}
+				fileData.print("\n");
 			}
-			fileData.print("\n");
+		}catch(IOException e){
+			e.printStackTrace();
 		}
+		
 	}
 }
 
