@@ -16,10 +16,10 @@ public class Shell {
 	private static PrintStream fileData;
 	private static File outFile;
 	
-	private static Manager m;
+	private static FileSystem fs;
 
 	public Shell(){
-		m = new Manager();
+		
 	}
 	
 	public void run(String inFile, int inputType){			// inputType;		// 0 = console; 1 = file
@@ -114,47 +114,47 @@ public class Shell {
 	}
 
 	public void init(String restoreFile){
-		m = new Manager(restoreFile);
+		fs = new FileSystem(restoreFile);
 	}
 	
 	public void init(){
-		m = new Manager();
+		fs = new FileSystem();
 	}
 
 	public void create(String name){
-		m.create(name);
+		fs.create(name);
 	}
 
 	public void delete(String name){
-		m.delete(name);
+		fs.delete(name);
 	}
 
 	public void open(String name){
-		m.open(name);
+		fs.open(name);
 	}
 
 	public void close(String name){
-		m.close(name);
+		fs.close(name);
 	}
 
 	public void read(int index, int count){
-		m.read(index, count);
+		fs.read(index, count);
 	}
 
 	public void write(int index, String c, int count){
 		// convert string to byte version before passing to manager
-		m.write(index, c.getBytes()[0], count);
+		fs.write(index, c.getBytes()[0], count);
 	}
 
 	public void seek(int index, int pos){
-		m.seek(index, pos);
+		fs.seek(index, pos);
 	}
 
 	public void directory(){
-		m.directory();
+		fs.directory();
 	}
 
 	public void save(String fileName){
-		m.save(fileName);
+		fs.save(fileName);
 	}
 }
