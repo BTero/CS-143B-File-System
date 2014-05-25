@@ -133,8 +133,8 @@ public class Shell {
 		fs.open(name);
 	}
 
-	public void close(String name){
-		fs.close(name);
+	public void close(String index){
+		fs.close(Integer.parseInt(index));
 	}
 
 	public void read(int index, int count){
@@ -143,7 +143,7 @@ public class Shell {
 
 	public void write(int index, String c, int count){
 		// convert string to byte version before passing to manager
-		fs.write(index, c.getBytes()[0], count);
+		fs.write(index, c.charAt(0), count);
 	}
 
 	public void seek(int index, int pos){
