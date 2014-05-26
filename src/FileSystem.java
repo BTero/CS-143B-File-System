@@ -378,8 +378,83 @@ public class FileSystem {
 		return -1;		// returns -1 when there is no more space within directory buffer
 	}
 
+	public int searchOFTDir(int buffer){	// searches directory in oft
+		int index = -1;
+		char[] block_noTemp = new char[4];
 
-	public void switchBlock(int buffer, int size, int allocate){
+		for(int i =0 ; i < 4; i++){
+			block_noTemp[i] = oft[buffer][68 + i];
+		}
+		int block_no = cti(block_noTemp);
+		io.write_block(block_no, oft[buffer]);
+
+		char[] blockTemp1 = new char[4];
+		char[] blockTemp2 = new char[4];
+		char[] blockTemp3 = new char[4];
+		for(int i = 0; i < 4; i++){
+			blockTemp1[i % 4] = desc_table[1][4 + i];
+			blockTemp2[i % 4] = desc_table[1][8 + i];
+			blockTemp3[i % 4] = desc_table[1][12 + i];
+		}
+		int block1 = cti(blockTemp1);
+		int block2 = cti(blockTemp2);
+		int block3 = cti(blockTemp3);
+
+		if(blockTemp1[0] == block_noTemp[0] &&
+				blockTemp1[1] == block_noTemp[1] &&
+				blockTemp1[2] == block_noTemp[2] &&
+				blockTemp1[3] == block_noTemp[3]){
+			if(block2 != 0){
+				char[] data = io.read_block(block2);
+				for(int i = 0; i < 64; i++){
+					oft[0][i] = data[i];
+				}
+				for(int i = 0; i < 4; i++){
+					oft[0][i + 68] = blockTemp2[i];
+				}
+			}
+		}else if(blockTemp2[0] == block_noTemp[0] &&
+				blockTemp2[1] == block_noTemp[1] &&
+				blockTemp2[2] == block_noTemp[2] &&
+				blockTemp2[3] == block_noTemp[3]){
+			if(block3 != 0){
+				char[] data = io.read_block(block3);
+				for(int i = 0; i < 64; i++){
+					oft[0][i] = data[i];
+				}
+				for(int i = 0; i < 4; i++){
+					oft[0][i + 68] = blockTemp3[i];
+				}
+			}else if(block2 != 0){
+				char[] data = io.read_block(block1);
+				for(int i = 0; i < 64; i++){
+					oft[0][i] = data[i];
+				}
+				for(int i = 0; i < 4; i++){
+					oft[0][i + 68] = blockTemp1[i];
+				}
+			}
+		}else if(blockTemp3[0] == block_noTemp[0] &&
+				blockTemp3[1] == block_noTemp[1] &&
+				blockTemp3[2] == block_noTemp[2] &&
+				blockTemp3[3] == block_noTemp[3]){
+			if(block1 != 0){
+				char[] data = io.read_block(block1);
+				for(int i = 0; i < 64; i++){
+					oft[0][i] = data[i];
+				}
+				for(int i = 0; i < 4; i++){
+					oft[0][i + 68] = blockTemp1[i];
+				}
+			}
+		}
+
+
+		return index;
+	}
+
+
+	public void switchBlock(int buffer, int size){
 		// used for when OFT entry is full
 		char[] desc_indexTemp = new char[4];
 		char[] block_noTemp = new char[4];
@@ -395,89 +470,25 @@ public class FileSystem {
 		int block_no = cti(block_noTemp);
 		io.write_block(block_no, oft[buffer]);
 
-		if(allocate == 0){	// switch blocks without allocating a new one. For OFT entry zero use
-			if(size >= 128){
-				char[] blockTemp1 = new char[4];
-				if(block_noTemp[0] == desc_table[desc_block_no][desc_pos + 4] &&
-						block_noTemp[1] == desc_table[desc_block_no][desc_pos + 5] &&
-						block_noTemp[2] == desc_table[desc_block_no][desc_pos + 6] &&
-						block_noTemp[3] == desc_table[desc_block_no][desc_pos + 7]){
-					block_noTemp[0] = desc_table[desc_block_no][desc_pos + 8];
-					block_noTemp[1] = desc_table[desc_block_no][desc_pos + 9];
-					block_noTemp[2] = desc_table[desc_block_no][desc_pos + 10];
-					block_noTemp[3] = desc_table[desc_block_no][desc_pos + 11];
-				}else if(block_noTemp[0] == desc_table[desc_block_no][desc_pos + 8] &&
-						block_noTemp[1] == desc_table[desc_block_no][desc_pos + 9] &&
-						block_noTemp[2] == desc_table[desc_block_no][desc_pos + 10] &&
-						block_noTemp[3] == desc_table[desc_block_no][desc_pos + 11]){
-					block_noTemp[0] = desc_table[desc_block_no][desc_pos + 12];
-					block_noTemp[1] = desc_table[desc_block_no][desc_pos + 13];
-					block_noTemp[2] = desc_table[desc_block_no][desc_pos + 14];
-					block_noTemp[3] = desc_table[desc_block_no][desc_pos + 15];
-				}else if(block_noTemp[0] == desc_table[desc_block_no][desc_pos + 12] &&
-						block_noTemp[1] == desc_table[desc_block_no][desc_pos + 13] &&
-						block_noTemp[2] == desc_table[desc_block_no][desc_pos + 14] &&
-						block_noTemp[3] == desc_table[desc_block_no][desc_pos + 15]){
-					block_noTemp[0] = desc_table[desc_block_no][desc_pos + 4];
-					block_noTemp[1] = desc_table[desc_block_no][desc_pos + 5];
-					block_noTemp[2] = desc_table[desc_block_no][desc_pos + 6];
-					block_noTemp[3] = desc_table[desc_block_no][desc_pos + 7];
-				}
-				block_no = cti(block_noTemp);
-				// update oft entry's block_no
-				for(int i = 0; i < 4; i++){
-					oft[0][i + 68] = block_noTemp[i];
-				}
-				char[] data = io.read_block(block_no);
-				for(int i = 0; i < 64; i++){
-					oft[0][i] = data[i];
-				}
-			}else if(size >= 64){
-				char[] blockTemp1 = new char[4];
-				if(block_noTemp[0] == desc_table[desc_block_no][desc_pos + 4] &&
-						block_noTemp[1] == desc_table[desc_block_no][desc_pos + 5] &&
-						block_noTemp[2] == desc_table[desc_block_no][desc_pos + 6] &&
-						block_noTemp[3] == desc_table[desc_block_no][desc_pos + 7]){
-					block_noTemp[0] = desc_table[desc_block_no][desc_pos + 8];
-					block_noTemp[1] = desc_table[desc_block_no][desc_pos + 9];
-					block_noTemp[2] = desc_table[desc_block_no][desc_pos + 10];
-					block_noTemp[3] = desc_table[desc_block_no][desc_pos + 11];
-				}else if(block_noTemp[0] == desc_table[desc_block_no][desc_pos + 8] &&
-						block_noTemp[1] == desc_table[desc_block_no][desc_pos + 9] &&
-						block_noTemp[2] == desc_table[desc_block_no][desc_pos + 10] &&
-						block_noTemp[3] == desc_table[desc_block_no][desc_pos + 11]){
-					block_noTemp[0] = desc_table[desc_block_no][desc_pos + 4];
-					block_noTemp[1] = desc_table[desc_block_no][desc_pos + 5];
-					block_noTemp[2] = desc_table[desc_block_no][desc_pos + 6];
-					block_noTemp[3] = desc_table[desc_block_no][desc_pos + 7];
-				}
-				block_no = cti(block_noTemp);
-				char[] data = io.read_block(block_no);
-				for(int i = 0; i < 64; i++){
-					oft[0][i] = data[i];
-				}
+
+		int new_block_no = searchBitmap();
+		block_noTemp = itc(new_block_no);
+		clearOFTEntry(buffer);
+
+		if(size == 64){
+			for(int i = 0; i < 4; i++){
+				desc_table[desc_block_no][desc_pos + 8 + i] = block_noTemp[i];
+				oft[buffer][i + 68] = block_noTemp[i];		// updates block_no to the new one
+				oft[buffer][i + 80] = '0';		// updates cur_pos to zero
 			}
-		}else{	// allocate a new block
-			int new_block_no = searchBitmap();
-			block_noTemp = itc(new_block_no);
-			clearOFTEntry(buffer);
 
-			if(size == 64){
-				for(int i = 0; i < 4; i++){
-					desc_table[desc_block_no][desc_pos + 8 + i] = block_noTemp[i];
-					oft[buffer][i + 68] = block_noTemp[i];		// updates block_no to the new one
-					oft[buffer][i + 80] = '0';		// updates cur_pos to zero
-				}
-
-			}else if(size == 128){
-				for(int i = 0; i < 4; i++){
-					desc_table[desc_block_no][desc_pos + 12 + i] = block_noTemp[i];
-					oft[buffer][i + 68] = block_noTemp[i];		// updates block_no to the new one
-					oft[buffer][i + 80] = '0';		// updates cur_pos to zero
-				}
+		}else if(size == 128){
+			for(int i = 0; i < 4; i++){
+				desc_table[desc_block_no][desc_pos + 12 + i] = block_noTemp[i];
+				oft[buffer][i + 68] = block_noTemp[i];		// updates block_no to the new one
+				oft[buffer][i + 80] = '0';		// updates cur_pos to zero
 			}
 		}
-
 	}
 
 	public void clearOFTEntry(int buffer){
@@ -541,7 +552,7 @@ public class FileSystem {
 
 				// OFT is full must open next buffer
 				if(oft_index == -1){
-					switchBlock(0, oft_size, 1);
+					switchBlock(0, oft_size);
 					oft_index = searchOFT();
 				}
 				oft_size += 8;
@@ -598,7 +609,7 @@ public class FileSystem {
 
 			int oft_index = searchOFT(name);
 			if(oft_index == -1){
-				status = "File found in directory but not stored in OFT";
+				status = "File found in directory but not stored in OFT.";
 			}else{
 				// update OFT directory entry
 				// clear directory entry in OFT
@@ -623,12 +634,12 @@ public class FileSystem {
 					desc_sizeTemp[i] = desc_table[desc_block_no][desc_pos + i];
 				}
 				int desc_size = cti(desc_sizeTemp);
-				
+
 				if(desc_size >= 128){
 					char[] blockTemp1 = new char[4];
 					char[] blockTemp2 = new char[4];
 					char[] blockTemp3 = new char[4];
-					
+
 					for(int i = 0; i < 4; i++){
 						blockTemp1[i] = desc_table[desc_block_no][desc_pos + i + 4];
 						blockTemp2[i] = desc_table[desc_block_no][desc_pos + i + 8];
@@ -637,7 +648,7 @@ public class FileSystem {
 					int block1 = cti(blockTemp1);
 					int block2 = cti(blockTemp2);
 					int block3 = cti(blockTemp3);
-					
+
 					//clear logical blocks used by the file descriptor
 					clearDataBlock(block1);
 					clearDataBlock(block2);
@@ -645,25 +656,25 @@ public class FileSystem {
 				}else if(desc_size >= 64){
 					char[] blockTemp1 = new char[4];
 					char[] blockTemp2 = new char[4];
-					
+
 					for(int i = 0; i < 4; i++){
 						blockTemp1[i] = desc_table[desc_block_no][desc_pos + i + 4];
 						blockTemp2[i] = desc_table[desc_block_no][desc_pos + i + 8];
 					}
 					int block1 = cti(blockTemp1);
 					int block2 = cti(blockTemp2);
-					
+
 					//clear logical blocks used by the file descriptor
 					clearDataBlock(block1);
 					clearDataBlock(block2);
 				}else{
 					char[] blockTemp1 = new char[4];
-					
+
 					for(int i = 0; i < 4; i++){
 						blockTemp1[i] = desc_table[desc_block_no][desc_pos + i + 4];
 					}
 					int block1 = cti(blockTemp1);
-					
+
 					//clear logical blocks used by the file descriptor
 					clearDataBlock(block1);
 				}
@@ -672,7 +683,7 @@ public class FileSystem {
 					desc_table[desc_block_no][desc_pos + i] = '0';
 				}
 				descriptors--;
-				status = " File " + name + " deleted.";
+				status = "File " + name + " deleted.";
 			}
 		}
 		return status;
@@ -701,14 +712,15 @@ public class FileSystem {
 						oft[0][i] == cName[i % 8] && oft[0][i + 1] == cName[(i % 8) + 1] &&
 						oft[0][i + 2] == cName[(i % 8) + 2] && oft[0][i + 3] == cName[(i % 8) + 3]){
 					// file found in oft buffer
+//					System.out.println(i);
 					return i;
 				}
 			}
-			count--;
+			
 			if(count != 0){
-				switchBlock(0, file_size, 0);
-			}
-		}while(count != 0);
+				searchOFTDir(0);
+			}count--;
+		}while(count != -1);
 		return index;
 	}
 
@@ -717,6 +729,7 @@ public class FileSystem {
 		for(int i = 0; i < 64; i++){
 			reset[i] = '0';
 		}
+		desc_table[0][block_no] = '0';
 		io.write_block(block_no, reset);
 	}
 
