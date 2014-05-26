@@ -317,6 +317,13 @@ public class FileSystem {
 		// finds if a file of <name> already exists
 		int index = -1;
 		char[] temp = new char[4];
+		if(name.length() == 3){
+			name = 0 + name;
+		}else if(name.length() == 2){
+			name = "0" + "0" + name;
+		}else if(name.length() == 1){
+			name = "0" + "0" + "0" + name;
+		}
 		if(descriptors == 24){
 			// reached the end of directory
 			return -2;
@@ -331,6 +338,7 @@ public class FileSystem {
 					index = i / 8;
 					return index;
 				}
+				
 			}
 		}
 		return index;
@@ -419,6 +427,25 @@ public class FileSystem {
 			oft[buffer][i] = '0';
 		}
 	}
+	
+	public char[] stc(String s){
+		char[] cName = new char[4];
+		char[] temp = s.toCharArray();
+		if(s.length() == 4){
+			cName[0] = temp[0];		cName[1] = temp[1];
+			cName[2] = temp[2];		cName[3] = temp[3];
+		}else if(s.length() == 3){
+			cName[0] = '0';		cName[1] = temp[0];
+			cName[2] = temp[1];		cName[3] = temp[2];
+		}else if(s.length() == 2){
+			cName[0] = '0';		cName[1] = '0';
+			cName[2] = temp[0];		cName[3] = temp[1];
+		}else{
+			cName[0] = '0';		cName[1] = '0';
+			cName[2] = '0';		cName[3] = temp[0];
+		}
+		return cName;
+	}
 
 	public String create(String name){
 		String status = "";
@@ -426,21 +453,7 @@ public class FileSystem {
 		int desc_index = searchDir(name);
 		if(desc_index == -1){			// file not found
 			// create file in directory and file descriptor and place it in the OFT entry
-			char[] cName = new char[4];
-			char[] temp = name.toCharArray();
-			if(name.length() == 4){
-				cName[0] = temp[0];		cName[1] = temp[1];
-				cName[2] = temp[2];		cName[3] = temp[3];
-			}else if(name.length() == 3){
-				cName[0] = '0';		cName[1] = temp[0];
-				cName[2] = temp[1];		cName[3] = temp[2];
-			}else if(name.length() == 2){
-				cName[0] = '0';		cName[1] = '0';
-				cName[2] = temp[0];		cName[3] = temp[1];
-			}else{
-				cName[0] = '0';		cName[1] = '0';
-				cName[2] = '0';		cName[3] = temp[0];
-			}
+			char[] cName = stc(name);
 
 			// search for a free file descriptor
 			desc_index = findDescriptor();
@@ -475,7 +488,7 @@ public class FileSystem {
 					directory[dir_index + i + 4] = desc_temp[i];
 
 					// fill file descriptor
-					desc_table[block_no][pos + 4] = data_blockTemp[i];
+					desc_table[block_no][pos + 4 + i] = data_blockTemp[i];
 
 					// fill oft entry
 					oft[0][oft_index + i] = cName[i];
@@ -500,11 +513,70 @@ public class FileSystem {
 
 	}
 
-	public void open(String name){
-
+	public String open(String name){
+		String status = "";
+		int index = searchDir(name);	// location within the directory; not the file descriptor index
+		if(index == -1){
+			status = "Open failed, file does not exist.";
+		}else{
+			int is_open = 0;
+			char[] is_openTemp = new char[4];
+			for(int i = 1; i < 4; i++){
+				for(int k = 0; k < 4; k++){
+					is_openTemp[k] = oft[i][k + 64];
+				}
+				is_open = cti(is_openTemp);
+				if(is_open == 0){		// OFT entry is open
+					// load file descriptor into oft entry
+					is_open = 1;
+					is_openTemp = itc(is_open);
+					
+					char[] desc_indexTemp = new char[4];
+					char[] file_sizeTemp = new char[4];
+					for(int m = 0; m < 4; m++){
+						desc_indexTemp[m] = directory[index + m + 4];
+						
+						// update desc_index in oft
+						oft[i][m + 72] = directory[index + m + 4];
+						// update is_open in oft
+						oft[i][m + 64] = is_openTemp[m];
+					}
+					int desc_index = cti(desc_indexTemp);
+					
+					int desc_block = (desc_index / 4) + 1;
+					int desc_pos = (desc_index % 4) * 16;
+					for(int m = 0; m < 4; m++){
+						file_sizeTemp[m] = desc_table[desc_block][desc_pos + m];
+						// update file size in oft
+						oft[i][m + 76] = desc_table[desc_block][desc_pos + m];
+					}
+					int file_size = cti(file_sizeTemp);
+					
+					//update block_no depending on file size in oft
+					if(file_size >= 128){
+						for(int n = 0; n < 4; n++){
+							oft[i][n + 68] = desc_table[desc_block][desc_pos + n + 12];
+						}
+					}else if(file_size >= 64){
+						for(int n = 0; n < 4; n++){
+							oft[i][n + 68] = desc_table[desc_block][desc_pos + n + 8];
+						}
+					}else{
+						for(int n = 0; n < 4; n++){
+							oft[i][n + 68] = desc_table[desc_block][desc_pos + n + 4];
+						}
+					}
+					
+					return "File loaded into index " + i + ".";
+				}
+			}
+			status = "OFT table is full.";
+		}
+		return status;
 	}
 
-	public void close(int index){
+	public String close(int index){
+		String status = "";
 		int is_open = Character.getNumericValue(oft[index][67]);
 		
 		if(is_open == 1){
@@ -515,7 +587,11 @@ public class FileSystem {
 			int block_no = cti(block_noTemp);
 			io.write_block(block_no, oft[index]);
 			clearOFT(index);
+			status = "OFT entry at " + index + " closed.";
+		}else{
+			status = "OFT entry at " + index + " was not opened.";
 		}
+		return status;
 	}
 
 	public void read(int index, int count){
@@ -526,18 +602,27 @@ public class FileSystem {
 
 	}
 
-	public void seek(int index, int pos){
-
+	public String seek(int index, int pos){
+		String status = "";
+		int is_open = Character.getNumericValue(oft[index][67]);
+		
+		if(is_open == 1){
+			char[] cur_posTemp = itc(pos);
+			for(int i = 0; i < 4; i++){
+				oft[index][80 + i] = cur_posTemp[i];
+			}			
+			status = "Current pos is " + pos;
+		}else{
+			status = "OFT entry at " + index + " was not opened.";
+		}
+		return status;
 	}
 
 	public void directory(){
-
+		
 	}
 
 	public void save(String out){
-		//		char[]is_openTemp = new char[4];
-		int is_open;
-
 		for(int i = 0; i < 4; i++){
 			close(i);
 		}
