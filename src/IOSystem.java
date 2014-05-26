@@ -49,16 +49,6 @@ public class IOSystem {
 				for(int k = 0; k < s.length; k++){
 					ldisk[i][k] = s[k].charAt(0);
 				}
-//				String fullLine = "";
-//				for(int k = 0; k < s.length; k++){
-//					fullLine += s[k];
-//				}
-//
-//				// restore line back into ldisk
-//
-//				for(int j = 0; j < B; j++){
-//					ldisk[i][j] = fullLine.getBytes()[j];
-//				}
 			}
 			br.close();
 		} catch (IOException e) {
