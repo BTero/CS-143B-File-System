@@ -267,8 +267,8 @@ public class FileSystem {
 				desc_table[0][i] = '1';
 			}
 		}
-		
-		
+
+
 	}
 
 	public int countDescriptors(){
@@ -324,10 +324,6 @@ public class FileSystem {
 		}else if(name.length() == 1){
 			name = "0" + "0" + "0" + name;
 		}
-		if(descriptors == 24){
-			// reached the end of directory
-			return -2;
-		}
 		for(int i = 0; i < directory.length; i++){
 			if(i % 8 == 0){
 				temp[i % 8] = directory[i];
@@ -338,8 +334,12 @@ public class FileSystem {
 					index = i / 8;
 					return index;
 				}
-				
+
 			}
+		}
+		if(descriptors == 24){
+			// reached the end of directory
+			return -2;
 		}
 		return index;
 	}
@@ -427,7 +427,7 @@ public class FileSystem {
 			oft[buffer][i] = '0';
 		}
 	}
-	
+
 	public char[] stc(String s){
 		char[] cName = new char[4];
 		char[] temp = s.toCharArray();
@@ -463,6 +463,7 @@ public class FileSystem {
 			int pos = (desc_index % 4) * 16;
 			int oft_index = searchOFT();
 			int data_block = searchBitmap();
+
 			if(data_block == -1){
 				status = "Creation failed. No more logical blocks to allocate.";
 			}else{
@@ -477,11 +478,10 @@ public class FileSystem {
 				// OFT is full must open next buffer
 				if(oft_index == -1){
 					switchBlock(0, oft_size);
+					oft_index = searchOFT();
 				}
-
 				oft_size += 8;
 				oft_sizeTemp = itc(oft_size);
-
 				for(int i = 0; i < 4; i++){
 					// fill directory entry
 					directory[dir_index + i] = cName[i];
@@ -495,9 +495,10 @@ public class FileSystem {
 					oft[0][oft_index + i + 4] = desc_temp[i];
 
 					// update oft size
-					oft[0][76 + i] = oft_sizeTemp[i]; 
+					oft[0][76 + i] = oft_sizeTemp[i];
 				}
 				descriptors++;
+				status = "File " + name + " created.";
 			}
 		}else if(desc_index == -2){
 			// reached the end of directory, no more space to create a new file
@@ -530,28 +531,29 @@ public class FileSystem {
 					// load file descriptor into oft entry
 					is_open = 1;
 					is_openTemp = itc(is_open);
-					
+
 					char[] desc_indexTemp = new char[4];
 					char[] file_sizeTemp = new char[4];
 					for(int m = 0; m < 4; m++){
 						desc_indexTemp[m] = directory[index + m + 4];
-						
+
 						// update desc_index in oft
 						oft[i][m + 72] = directory[index + m + 4];
 						// update is_open in oft
 						oft[i][m + 64] = is_openTemp[m];
 					}
+
 					int desc_index = cti(desc_indexTemp);
-					
 					int desc_block = (desc_index / 4) + 1;
 					int desc_pos = (desc_index % 4) * 16;
 					for(int m = 0; m < 4; m++){
 						file_sizeTemp[m] = desc_table[desc_block][desc_pos + m];
+
 						// update file size in oft
 						oft[i][m + 76] = desc_table[desc_block][desc_pos + m];
 					}
 					int file_size = cti(file_sizeTemp);
-					
+
 					//update block_no depending on file size in oft
 					if(file_size >= 128){
 						for(int n = 0; n < 4; n++){
@@ -566,7 +568,7 @@ public class FileSystem {
 							oft[i][n + 68] = desc_table[desc_block][desc_pos + n + 4];
 						}
 					}
-					
+
 					return "File loaded into index " + i + ".";
 				}
 			}
@@ -578,7 +580,7 @@ public class FileSystem {
 	public String close(int index){
 		String status = "";
 		int is_open = Character.getNumericValue(oft[index][67]);
-		
+
 		if(is_open == 1){
 			char[] block_noTemp = new char[4];
 			for(int i = 0; i < 4; i++){
@@ -595,17 +597,17 @@ public class FileSystem {
 	}
 
 	public void read(int index, int count){
-
+		
 	}
 
 	public void write(int index, char c, int count){
-
+		
 	}
 
 	public String seek(int index, int pos){
 		String status = "";
 		int is_open = Character.getNumericValue(oft[index][67]);
-		
+
 		if(is_open == 1){
 			char[] cur_posTemp = itc(pos);
 			for(int i = 0; i < 4; i++){
@@ -618,11 +620,36 @@ public class FileSystem {
 		return status;
 	}
 
-	public void directory(){
-		
+	public String cts(char[] data){
+		String s = "";
+		for(int i = 0; i < 4; i++){
+			if(data[i] != '0'){
+				s += data[i];
+			}
+		}
+		return s;
 	}
 
-	public void save(String out){
+	public String directory(){
+		String status = "";
+		if(descriptors == 1){
+			status = "No files in directory.";
+		}else{
+			char[] temp = new char[4];
+			for(int i = 0; i < directory.length; i++){
+				if(i % 8 == 0){
+					temp[(i % 8)] = directory[i];		temp[(i % 8) + 1] = directory[i + 1];
+					temp[(i % 8) + 2] = directory[i + 2];	temp[(i % 8) + 2] = directory[i + 3];
+					status += cts(temp) + " ";
+
+				}
+			}
+		}
+
+		return status;
+	}
+
+	public String save(String out){
 		for(int i = 0; i < 4; i++){
 			close(i);
 		}
@@ -631,5 +658,6 @@ public class FileSystem {
 			io.write_block(i, desc_table[i]);
 		}
 		io.save(out);
+		return "Disk saved.";
 	}
 }
