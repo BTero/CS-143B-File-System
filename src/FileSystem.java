@@ -331,8 +331,7 @@ public class FileSystem {
 				temp[(i % 8) + 2] = directory[i + 2];
 				temp[(i % 8) + 3] = directory[i + 3];
 				if(name.equals(String.valueOf(temp))){
-					index = i / 8;
-					return index;
+					return i;
 				}
 
 			}
@@ -363,7 +362,7 @@ public class FileSystem {
 		return index;
 	}
 
-	public int searchOFT(){
+	public int searchOFT(){		// finds an allocatable spot in the oft
 		char[] temp = new char[4];
 		for(int i = 0; i < 64; i++){
 			if(i % 8 == 0){
@@ -380,7 +379,7 @@ public class FileSystem {
 	}
 
 
-	public void switchBlock(int buffer, int size){
+	public void switchBlock(int buffer, int size, int allocate){
 		// used for when OFT entry is full
 		char[] desc_indexTemp = new char[4];
 		char[] block_noTemp = new char[4];
@@ -391,29 +390,94 @@ public class FileSystem {
 			block_noTemp[i] = oft[buffer][68 + i];
 		}
 		int desc_index = cti(desc_indexTemp);
+		int desc_block_no = (desc_index / 4) + 1;
+		int desc_pos = (desc_index % 4) * 16;
 		int block_no = cti(block_noTemp);
 		io.write_block(block_no, oft[buffer]);
-		int new_block_no = searchBitmap();
-		block_noTemp = itc(new_block_no);
 
-		int desc_block = (desc_index / 4) + 1;
-		int desc_pos = (desc_index % 4) * 16;
-		clearOFTEntry(buffer);
-
-		if(size == 64){
-			for(int i = 0; i < 4; i++){
-				desc_table[desc_block][desc_pos + 8 + i] = block_noTemp[i];
-				oft[buffer][i + 68] = block_noTemp[i];		// updates block_no to the new one
-				oft[buffer][i + 80] = '0';		// updates cur_pos to zero
+		if(allocate == 0){	// switch blocks without allocating a new one. For OFT entry zero use
+			if(size >= 128){
+				char[] blockTemp1 = new char[4];
+				if(block_noTemp[0] == desc_table[desc_block_no][desc_pos + 4] &&
+						block_noTemp[1] == desc_table[desc_block_no][desc_pos + 5] &&
+						block_noTemp[2] == desc_table[desc_block_no][desc_pos + 6] &&
+						block_noTemp[3] == desc_table[desc_block_no][desc_pos + 7]){
+					block_noTemp[0] = desc_table[desc_block_no][desc_pos + 8];
+					block_noTemp[1] = desc_table[desc_block_no][desc_pos + 9];
+					block_noTemp[2] = desc_table[desc_block_no][desc_pos + 10];
+					block_noTemp[3] = desc_table[desc_block_no][desc_pos + 11];
+				}else if(block_noTemp[0] == desc_table[desc_block_no][desc_pos + 8] &&
+						block_noTemp[1] == desc_table[desc_block_no][desc_pos + 9] &&
+						block_noTemp[2] == desc_table[desc_block_no][desc_pos + 10] &&
+						block_noTemp[3] == desc_table[desc_block_no][desc_pos + 11]){
+					block_noTemp[0] = desc_table[desc_block_no][desc_pos + 12];
+					block_noTemp[1] = desc_table[desc_block_no][desc_pos + 13];
+					block_noTemp[2] = desc_table[desc_block_no][desc_pos + 14];
+					block_noTemp[3] = desc_table[desc_block_no][desc_pos + 15];
+				}else if(block_noTemp[0] == desc_table[desc_block_no][desc_pos + 12] &&
+						block_noTemp[1] == desc_table[desc_block_no][desc_pos + 13] &&
+						block_noTemp[2] == desc_table[desc_block_no][desc_pos + 14] &&
+						block_noTemp[3] == desc_table[desc_block_no][desc_pos + 15]){
+					block_noTemp[0] = desc_table[desc_block_no][desc_pos + 4];
+					block_noTemp[1] = desc_table[desc_block_no][desc_pos + 5];
+					block_noTemp[2] = desc_table[desc_block_no][desc_pos + 6];
+					block_noTemp[3] = desc_table[desc_block_no][desc_pos + 7];
+				}
+				block_no = cti(block_noTemp);
+				// update oft entry's block_no
+				for(int i = 0; i < 4; i++){
+					oft[0][i + 68] = block_noTemp[i];
+				}
+				char[] data = io.read_block(block_no);
+				for(int i = 0; i < 64; i++){
+					oft[0][i] = data[i];
+				}
+			}else if(size >= 64){
+				char[] blockTemp1 = new char[4];
+				if(block_noTemp[0] == desc_table[desc_block_no][desc_pos + 4] &&
+						block_noTemp[1] == desc_table[desc_block_no][desc_pos + 5] &&
+						block_noTemp[2] == desc_table[desc_block_no][desc_pos + 6] &&
+						block_noTemp[3] == desc_table[desc_block_no][desc_pos + 7]){
+					block_noTemp[0] = desc_table[desc_block_no][desc_pos + 8];
+					block_noTemp[1] = desc_table[desc_block_no][desc_pos + 9];
+					block_noTemp[2] = desc_table[desc_block_no][desc_pos + 10];
+					block_noTemp[3] = desc_table[desc_block_no][desc_pos + 11];
+				}else if(block_noTemp[0] == desc_table[desc_block_no][desc_pos + 8] &&
+						block_noTemp[1] == desc_table[desc_block_no][desc_pos + 9] &&
+						block_noTemp[2] == desc_table[desc_block_no][desc_pos + 10] &&
+						block_noTemp[3] == desc_table[desc_block_no][desc_pos + 11]){
+					block_noTemp[0] = desc_table[desc_block_no][desc_pos + 4];
+					block_noTemp[1] = desc_table[desc_block_no][desc_pos + 5];
+					block_noTemp[2] = desc_table[desc_block_no][desc_pos + 6];
+					block_noTemp[3] = desc_table[desc_block_no][desc_pos + 7];
+				}
+				block_no = cti(block_noTemp);
+				char[] data = io.read_block(block_no);
+				for(int i = 0; i < 64; i++){
+					oft[0][i] = data[i];
+				}
 			}
+		}else{	// allocate a new block
+			int new_block_no = searchBitmap();
+			block_noTemp = itc(new_block_no);
+			clearOFTEntry(buffer);
 
-		}else if(size == 128){
-			for(int i = 0; i < 4; i++){
-				desc_table[desc_block][desc_pos + 12 + i] = block_noTemp[i];
-				oft[buffer][i + 68] = block_noTemp[i];		// updates block_no to the new one
-				oft[buffer][i + 80] = '0';		// updates cur_pos to zero
+			if(size == 64){
+				for(int i = 0; i < 4; i++){
+					desc_table[desc_block_no][desc_pos + 8 + i] = block_noTemp[i];
+					oft[buffer][i + 68] = block_noTemp[i];		// updates block_no to the new one
+					oft[buffer][i + 80] = '0';		// updates cur_pos to zero
+				}
+
+			}else if(size == 128){
+				for(int i = 0; i < 4; i++){
+					desc_table[desc_block_no][desc_pos + 12 + i] = block_noTemp[i];
+					oft[buffer][i + 68] = block_noTemp[i];		// updates block_no to the new one
+					oft[buffer][i + 80] = '0';		// updates cur_pos to zero
+				}
 			}
 		}
+
 	}
 
 	public void clearOFTEntry(int buffer){
@@ -477,7 +541,7 @@ public class FileSystem {
 
 				// OFT is full must open next buffer
 				if(oft_index == -1){
-					switchBlock(0, oft_size);
+					switchBlock(0, oft_size, 1);
 					oft_index = searchOFT();
 				}
 				oft_size += 8;
@@ -494,8 +558,9 @@ public class FileSystem {
 					oft[0][oft_index + i] = cName[i];
 					oft[0][oft_index + i + 4] = desc_temp[i];
 
-					// update oft size
+					// update oft size and directory file descriptor size
 					oft[0][76 + i] = oft_sizeTemp[i];
+					desc_table[1][i] = oft_sizeTemp[i];
 				}
 				descriptors++;
 				status = "File " + name + " created.";
@@ -510,14 +575,155 @@ public class FileSystem {
 		return status;
 	}
 
-	public void delete(String name){
+	public String delete(String name){
+		String status = "";
+		int dir_index = searchDir(name);
+		if(dir_index == -1){
+			status = "File does not exist.";
+		}else{
+			char[] desc_indexTemp = new char[4];
+			for(int i = 0; i < 4; i++){
+				desc_indexTemp[i] = directory[dir_index + i + 4];
+			}
+			int desc_index = cti(desc_indexTemp);
+			int desc_block_no = (desc_index / 4) + 1;
+			int desc_pos = (desc_index % 4) * 16;
+			// so we have the desc_index of where the file descriptor is located
+			// retrieve the file size
+			char[] dir_sizeTemp = new char[4];
+			for(int i = 0; i < 4; i++){
+				dir_sizeTemp[i] = desc_table[1][i];
+			}
+			int dir_size = cti(dir_sizeTemp);
 
+			int oft_index = searchOFT(name);
+			if(oft_index == -1){
+				status = "File found in directory but not stored in OFT";
+			}else{
+				// update OFT directory entry
+				// clear directory entry in OFT
+				for(int i = 0; i < 8; i++){
+					oft[0][oft_index + i] = '0';
+				}
+				// reduce directory size
+				dir_size -= 8;
+				dir_sizeTemp = itc(dir_size);
+				// update OFT's directory size and directory's file descriptor
+				for(int i = 0; i < 4; i++){
+					oft[0][i + 76] = dir_sizeTemp[i];
+					desc_table[1][i] = dir_sizeTemp[i];
+				}
+				// delete file from directory
+				for(int i = 0; i < 4; i++){
+					directory[dir_index + i] = '0';
+				}
+				// delete file descriptor's data and delete logical blocks of data used by descriptor
+				char[] desc_sizeTemp = new char[4];
+				for(int i = 0; i < 4; i++){
+					desc_sizeTemp[i] = desc_table[desc_block_no][desc_pos + i];
+				}
+				int desc_size = cti(desc_sizeTemp);
+				
+				if(desc_size >= 128){
+					char[] blockTemp1 = new char[4];
+					char[] blockTemp2 = new char[4];
+					char[] blockTemp3 = new char[4];
+					
+					for(int i = 0; i < 4; i++){
+						blockTemp1[i] = desc_table[desc_block_no][desc_pos + i + 4];
+						blockTemp2[i] = desc_table[desc_block_no][desc_pos + i + 8];
+						blockTemp3[i] = desc_table[desc_block_no][desc_pos + i + 12];
+					}
+					int block1 = cti(blockTemp1);
+					int block2 = cti(blockTemp2);
+					int block3 = cti(blockTemp3);
+					
+					//clear logical blocks used by the file descriptor
+					clearDataBlock(block1);
+					clearDataBlock(block2);
+					clearDataBlock(block3);
+				}else if(desc_size >= 64){
+					char[] blockTemp1 = new char[4];
+					char[] blockTemp2 = new char[4];
+					
+					for(int i = 0; i < 4; i++){
+						blockTemp1[i] = desc_table[desc_block_no][desc_pos + i + 4];
+						blockTemp2[i] = desc_table[desc_block_no][desc_pos + i + 8];
+					}
+					int block1 = cti(blockTemp1);
+					int block2 = cti(blockTemp2);
+					
+					//clear logical blocks used by the file descriptor
+					clearDataBlock(block1);
+					clearDataBlock(block2);
+				}else{
+					char[] blockTemp1 = new char[4];
+					
+					for(int i = 0; i < 4; i++){
+						blockTemp1[i] = desc_table[desc_block_no][desc_pos + i + 4];
+					}
+					int block1 = cti(blockTemp1);
+					
+					//clear logical blocks used by the file descriptor
+					clearDataBlock(block1);
+				}
+				// clear file descriptor in reserved descriptor table
+				for(int i = 0; i < 16; i++){
+					desc_table[desc_block_no][desc_pos + i] = '0';
+				}
+				descriptors--;
+				status = " File " + name + " deleted.";
+			}
+		}
+		return status;
+	}
+
+	public int searchOFT(String name){
+		int index = -1;
+		char[] cName = stc(name);
+		char[] file_sizeTemp = new char[4];
+		for(int i = 0; i < 4; i++){
+			file_sizeTemp[i] = oft[0][i + 76];
+		}
+		int file_size = cti(file_sizeTemp);
+		int count;
+		if(file_size >= 128){
+			count = 3;
+		}else if(file_size >= 64){
+			count = 2;
+		}else{
+			count = 1;
+		}
+
+		do{
+			for(int i = 0; i < 64; i++){
+				if(i % 8 == 0 &&
+						oft[0][i] == cName[i % 8] && oft[0][i + 1] == cName[(i % 8) + 1] &&
+						oft[0][i + 2] == cName[(i % 8) + 2] && oft[0][i + 3] == cName[(i % 8) + 3]){
+					// file found in oft buffer
+					return i;
+				}
+			}
+			count--;
+			if(count != 0){
+				switchBlock(0, file_size, 0);
+			}
+		}while(count != 0);
+		return index;
+	}
+
+	public void clearDataBlock(int block_no){
+		char[] reset = new char[64];
+		for(int i = 0; i < 64; i++){
+			reset[i] = '0';
+		}
+		io.write_block(block_no, reset);
 	}
 
 	public String open(String name){
 		String status = "";
-		int index = searchDir(name);	// location within the directory; not the file descriptor index
-		if(index == -1){
+		int dir_index = searchDir(name);	// location within the directory; not the file descriptor index
+		if(dir_index == -1){
 			status = "Open failed, file does not exist.";
 		}else{
 			int is_open = 0;
@@ -535,10 +741,10 @@ public class FileSystem {
 					char[] desc_indexTemp = new char[4];
 					char[] file_sizeTemp = new char[4];
 					for(int m = 0; m < 4; m++){
-						desc_indexTemp[m] = directory[index + m + 4];
+						desc_indexTemp[m] = directory[dir_index + m + 4];
 
 						// update desc_index in oft
-						oft[i][m + 72] = directory[index + m + 4];
+						oft[i][m + 72] = directory[dir_index + m + 4];
 						// update is_open in oft
 						oft[i][m + 64] = is_openTemp[m];
 					}
@@ -597,11 +803,11 @@ public class FileSystem {
 	}
 
 	public void read(int index, int count){
-		
+
 	}
 
 	public void write(int index, char c, int count){
-		
+
 	}
 
 	public String seek(int index, int pos){
@@ -640,8 +846,7 @@ public class FileSystem {
 				if(i % 8 == 0){
 					temp[(i % 8)] = directory[i];		temp[(i % 8) + 1] = directory[i + 1];
 					temp[(i % 8) + 2] = directory[i + 2];	temp[(i % 8) + 2] = directory[i + 3];
-					status += cts(temp) + " ";
-
+					status += cts(temp);
 				}
 			}
 		}
