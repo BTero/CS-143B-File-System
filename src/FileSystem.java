@@ -196,6 +196,7 @@ public class FileSystem {
 		}
 
 		int dirSize = cti(size);
+		System.out.println(dirSize);
 		if(dirSize > 128){
 			char[] index1 = new char[4];
 			char[] index2 = new char[4];
@@ -476,17 +477,50 @@ public class FileSystem {
 		clearOFTEntry(buffer);
 
 		if(size == 64){
+			char[] temp = new char[4];
 			for(int i = 0; i < 4; i++){
-				desc_table[desc_block_no][desc_pos + 8 + i] = block_noTemp[i];
-				oft[buffer][i + 68] = block_noTemp[i];		// updates block_no to the new one
-				oft[buffer][i + 80] = '0';		// updates cur_pos to zero
+				temp[i] = desc_table[desc_block_no][desc_pos + 8 + i];
 			}
-
+			int tempno = cti(temp);
+			if(tempno == 0){
+				for(int i = 0; i < 4; i++){
+					desc_table[desc_block_no][desc_pos + 8 + i] = block_noTemp[i];
+					oft[buffer][i + 68] = block_noTemp[i];		// updates block_no to the new one
+					oft[buffer][i + 80] = '0';		// updates cur_pos to zero
+				}
+				desc_table[0][new_block_no] = '1';
+			}else{
+				// next block has been allocated and needs to read into oft entry
+				char[] data = io.read_block(tempno);
+				for(int i = 0; i < 64; i++){
+					oft[buffer][i] = data[i];
+				}
+				for(int i = 0; i < 4; i++){
+					oft[buffer][68 + i] = temp[i];
+				}
+			}
 		}else if(size == 128){
+			char[] temp = new char[4];
 			for(int i = 0; i < 4; i++){
-				desc_table[desc_block_no][desc_pos + 12 + i] = block_noTemp[i];
-				oft[buffer][i + 68] = block_noTemp[i];		// updates block_no to the new one
-				oft[buffer][i + 80] = '0';		// updates cur_pos to zero
+				temp[i] = desc_table[desc_block_no][desc_pos + 12 + i];
+			}
+			int tempno = cti(temp);
+			if(tempno == 0){
+				for(int i = 0; i < 4; i++){
+					desc_table[desc_block_no][desc_pos + 12 + i] = block_noTemp[i];
+					oft[buffer][i + 68] = block_noTemp[i];		// updates block_no to the new one
+					oft[buffer][i + 80] = '0';		// updates cur_pos to zero
+				}
+				desc_table[0][new_block_no] = '1';
+			}else{
+				// next block has been allocated and needs to read into oft entry
+				char[] data = io.read_block(tempno);
+				for(int i = 0; i < 64; i++){
+					oft[buffer][i] = data[i];
+				}
+				for(int i = 0; i < 4; i++){
+					oft[buffer][68 + i] = temp[i];
+				}
 			}
 		}
 	}
@@ -548,8 +582,7 @@ public class FileSystem {
 				for(int i = 0; i < 4; i++){
 					oft_sizeTemp[i] = oft[0][76 + i];
 				}
-				int oft_size = cti(oft_sizeTemp);			
-
+				int oft_size = cti(oft_sizeTemp);		
 				// OFT is full must open next buffer
 				if(oft_index == -1){
 					switchBlock(0, oft_size);
@@ -684,6 +717,24 @@ public class FileSystem {
 				}
 				descriptors--;
 				status = "File " + name + " deleted.";
+				
+				if(dir_size == 0){
+					char[] block_noTemp	= new char[4];
+					for(int i = 0; i < 4; i++){
+						block_noTemp[i] = oft[0][68 +  i];
+					}
+					int block_no = cti(block_noTemp);
+					io.write_block(block_no, oft[0]);
+					for(int i = 0; i < 4; i++){
+						block_noTemp[i] = desc_table[1][4 + i];
+						oft[0][68 + i] = desc_table[1][4 + i];
+					}
+					block_no = cti(block_noTemp);
+					char[] data = io.read_block(block_no);
+					for(int i = 0; i < 64; i++){
+						oft[0][i] = data[i];
+					}
+				}
 			}
 		}
 		return status;
@@ -712,11 +763,11 @@ public class FileSystem {
 						oft[0][i] == cName[i % 8] && oft[0][i + 1] == cName[(i % 8) + 1] &&
 						oft[0][i + 2] == cName[(i % 8) + 2] && oft[0][i + 3] == cName[(i % 8) + 3]){
 					// file found in oft buffer
-//					System.out.println(i);
+					//					System.out.println(i);
 					return i;
 				}
 			}
-			
+
 			if(count != 0){
 				searchOFTDir(0);
 			}count--;
@@ -739,7 +790,7 @@ public class FileSystem {
 		if(dir_index == -1){
 			status = "Open failed, file does not exist.";
 		}else{
-			int is_open = 0;
+			int is_open;
 			char[] is_openTemp = new char[4];
 			for(int i = 1; i < 4; i++){
 				for(int k = 0; k < 4; k++){
@@ -815,12 +866,83 @@ public class FileSystem {
 		return status;
 	}
 
-	public void read(int index, int count){
+	public String read(int index, int count){
+		String status = "";
+		int is_open = Character.getNumericValue(oft[index][67]);
 
+		if(is_open == 1){
+			char[] cur_posTemp = new char[4];
+			char[] file_sizeTemp = new char[4];
+			for(int i = 0; i < 4; i++){
+				cur_posTemp[i] = oft[index][i + 80];
+				file_sizeTemp[i] = oft[index][i + 76];
+			}
+			int cur_pos = cti(cur_posTemp);
+			int file_size = cti(file_sizeTemp);
+			
+			if(count + cur_pos > 192){
+				status = "Read failed, " + count + " exceeds maximum file length.";
+			}else{
+				status = count + " bytes read: ";
+				for(int i = 0; i < count; i++){
+					if(cur_pos + i == 64){
+						switchBlock(index, 64);
+					}else if(cur_pos + i == 128){
+						switchBlock(index, 128);
+					}
+					status += oft[index][(cur_pos % 64) + i];
+				}
+				cur_posTemp = itc(cur_pos);
+				for(int i = 0; i < 4; i++){
+					oft[index][i + 80] = cur_posTemp[i];
+				}
+				
+			}
+		}else{
+			status = "Read failed. OFT entry at " + index + " was not opened.";
+		}
+		return status;
 	}
 
-	public void write(int index, char c, int count){
+	public String write(int index, char c, int count){
+		String status = "";
+		int is_open = Character.getNumericValue(oft[index][67]);
 
+		if(is_open == 1){
+			char[] cur_posTemp = new char[4];
+			char[] file_sizeTemp = new char[4];
+			for(int i = 0; i < 4; i++){
+				cur_posTemp[i] = oft[index][i + 80];
+				file_sizeTemp[i] = oft[index][i + 76];
+			}
+			int cur_pos = cti(cur_posTemp);
+			int file_size = cti(file_sizeTemp);
+
+			if(count + cur_pos > 192){
+				status = "Write failed, " + count + " exceeds maximum file length.";
+			}else{
+				for(int i = 0; i < count; i++){
+					if(file_size + i == 64){
+						switchBlock(index, 64);
+					}else if(file_size + i == 128){
+						switchBlock(index, 128);
+					}
+					oft[index][(cur_pos % 64) + i] = c;
+				}
+				file_size += count;
+				cur_pos += count;
+				file_sizeTemp = itc(file_size);
+				cur_posTemp = itc(cur_pos);
+				for(int i = 0; i < 4; i++){
+					oft[index][i + 76] = file_sizeTemp[i];
+					oft[index][i + 80] = cur_posTemp[i];
+				}
+				status = count + " bytes written.";
+			}
+		}else{
+			status = "Write failed. OFT entry at " + index + " was not opened.";
+		}
+		return status;
 	}
 
 	public String seek(int index, int pos){
@@ -829,6 +951,56 @@ public class FileSystem {
 
 		if(is_open == 1){
 			char[] cur_posTemp = itc(pos);
+			char[] desc_indexTemp = new char[4];
+			for(int i = 0; i < 4; i++){
+				desc_indexTemp[i] = oft[index][72 + i];
+			}
+			int desc_index = cti(desc_indexTemp);
+			int desc_block = (desc_index / 4) + 1;
+			int desc_pos = (desc_index % 4) * 16;
+
+			if(pos >= 128){
+				if(desc_table[desc_block][desc_pos + 8] == '0' &&
+						desc_table[desc_block][desc_pos + 9] == '0' &&
+						desc_table[desc_block][desc_pos + 10] == '0' &&
+						desc_table[desc_block][desc_pos + 11] == '0'){
+					int newBlock_no = allocateBlock(desc_block, desc_pos + 8);
+
+					if(desc_table[desc_block][desc_pos + 12] == '0' &&
+							desc_table[desc_block][desc_pos + 13] == '0' &&
+							desc_table[desc_block][desc_pos + 14] == '0' &&
+							desc_table[desc_block][desc_pos + 15] == '0'){
+						newBlock_no = allocateBlock(desc_block, desc_pos + 12);
+					}
+
+					char[] newBlock_noTemp = itc(newBlock_no);
+					for(int i = 0; i < 4; i++){
+						oft[index][i + 72] = newBlock_noTemp[i];
+					}
+				}else if(desc_table[desc_block][desc_pos + 12] == '0' &&
+						desc_table[desc_block][desc_pos + 13] == '0' &&
+						desc_table[desc_block][desc_pos + 14] == '0' &&
+						desc_table[desc_block][desc_pos + 15] == '0'){
+					int newBlock_no = allocateBlock(desc_block, desc_pos + 12);
+					char[] newBlock_noTemp = itc(newBlock_no);
+					for(int i = 0; i < 4; i++){
+						oft[index][i + 72] = newBlock_noTemp[i];
+					}
+				}
+			}else if(pos >= 64){
+				if(desc_table[desc_block][desc_pos + 8] == '0' &&
+						desc_table[desc_block][desc_pos + 9] == '0' &&
+						desc_table[desc_block][desc_pos + 10] == '0' &&
+						desc_table[desc_block][desc_pos + 11] == '0'){
+					int newBlock_no = allocateBlock(desc_block, desc_pos + 8);
+					char[] newBlock_noTemp = itc(newBlock_no);
+
+					for(int i = 0; i < 4; i++){
+						oft[index][i + 72] = newBlock_noTemp[i];
+					}
+				}
+			}
+
 			for(int i = 0; i < 4; i++){
 				oft[index][80 + i] = cur_posTemp[i];
 			}			
@@ -837,6 +1009,16 @@ public class FileSystem {
 			status = "OFT entry at " + index + " was not opened.";
 		}
 		return status;
+	}
+
+	public int allocateBlock(int desc_block, int desc_pos){
+		int newBlock_no = searchBitmap();
+		char[] newBlock_noTemp = itc(newBlock_no);
+		for(int i = 0; i < 4; i++){
+			desc_table[desc_block][desc_pos] = newBlock_noTemp[i];
+		}
+		desc_table[0][newBlock_no] = '1';
+		return newBlock_no;
 	}
 
 	public String cts(char[] data){
