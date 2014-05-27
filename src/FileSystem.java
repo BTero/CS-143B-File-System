@@ -17,6 +17,8 @@ public class FileSystem {
 	private static char[] directory;
 	private static char[][] oft;
 	private static int descriptors = 0;
+	private static int restored = 0; // 0 false 1 true
+	private static int initialized = 0;
 
 	public FileSystem(){
 		io = new IOSystem();
@@ -41,6 +43,7 @@ public class FileSystem {
 			desc_table[1][i + 4] = indexTemp[i];
 		}
 		descriptors = 1;
+		initialized = 1;
 	}
 
 	public FileSystem(String restoreFile){
@@ -52,10 +55,20 @@ public class FileSystem {
 		// restore information to data structures
 		loadDescTable(1);
 		loadDir();
+		allocateOFT(0);
 		allocateOFT(1);
 		descriptors = countDescriptors();
+		restored = 1;
 	}
-
+	
+	public int restored(){
+		return restored;
+	}
+	
+	public int initialized(){
+		return initialized;
+	}
+	
 	public int searchBitmap(){
 		int index = -1;
 		for(int i = 0; i < 64; i++){
@@ -196,7 +209,6 @@ public class FileSystem {
 		}
 
 		int dirSize = cti(size);
-		System.out.println(dirSize);
 		if(dirSize > 128){
 			char[] index1 = new char[4];
 			char[] index2 = new char[4];
@@ -563,7 +575,6 @@ public class FileSystem {
 		if(desc_index == -1){			// file not found
 			// create file in directory and file descriptor and place it in the OFT entry
 			char[] cName = stc(name);
-
 			// search for a free file descriptor
 			desc_index = findDescriptor();
 			int dir_index = searchDir();
@@ -594,7 +605,7 @@ public class FileSystem {
 					// fill directory entry
 					directory[dir_index + i] = cName[i];
 					directory[dir_index + i + 4] = desc_temp[i];
-
+					
 					// fill file descriptor
 					desc_table[block_no][pos + 4 + i] = data_blockTemp[i];
 
@@ -825,18 +836,30 @@ public class FileSystem {
 					int file_size = cti(file_sizeTemp);
 
 					//update block_no depending on file size in oft
-					if(file_size >= 128){
-						for(int n = 0; n < 4; n++){
-							oft[i][n + 68] = desc_table[desc_block][desc_pos + n + 12];
-						}
-					}else if(file_size >= 64){
-						for(int n = 0; n < 4; n++){
-							oft[i][n + 68] = desc_table[desc_block][desc_pos + n + 8];
-						}
-					}else{
-						for(int n = 0; n < 4; n++){
-							oft[i][n + 68] = desc_table[desc_block][desc_pos + n + 4];
-						}
+//					if(file_size >= 128){
+//						for(int n = 0; n < 4; n++){
+//							oft[i][n + 68] = desc_table[desc_block][desc_pos + n + 12];
+//						}
+//					}else if(file_size >= 64){
+//						for(int n = 0; n < 4; n++){
+//							oft[i][n + 68] = desc_table[desc_block][desc_pos + n + 8];
+//						}
+//					}else{
+//						for(int n = 0; n < 4; n++){
+//							oft[i][n + 68] = desc_table[desc_block][desc_pos + n + 4];
+//						}
+//					}
+					char[] block_noTemp = new char[4];
+					for(int l = 0; l < 4; l++){
+						block_noTemp[l] = desc_table[desc_block][desc_pos + l + 4];
+					}
+					int block_no = cti(block_noTemp);
+					for(int l = 0; l < 4; l++){
+						oft[i][l + 68] = block_noTemp[l];
+					}
+					char[] data = io.read_block(block_no);
+					for(int l = 0; l < 64; l++){
+						oft[i][l] = data[l];
 					}
 
 					return "File loaded into index " + i + ".";
@@ -884,13 +907,17 @@ public class FileSystem {
 				status = "Read failed, " + count + " exceeds maximum file length.";
 			}else{
 				status = count + " bytes read: ";
+				for(int i = 0; i < 64; i++){
+					System.out.print(oft[index][i]);
+				}System.out.println();
 				for(int i = 0; i < count; i++){
-					if(cur_pos + i == 64){
+					if(cur_pos == 64){
 						switchBlock(index, 64);
-					}else if(cur_pos + i == 128){
+					}else if(cur_pos == 128){
 						switchBlock(index, 128);
 					}
-					status += oft[index][(cur_pos % 64) + i];
+					status += oft[index][(cur_pos % 64)];
+					cur_pos++;
 				}
 				cur_posTemp = itc(cur_pos);
 				for(int i = 0; i < 4; i++){
@@ -907,7 +934,6 @@ public class FileSystem {
 	public String write(int index, char c, int count){
 		String status = "";
 		int is_open = Character.getNumericValue(oft[index][67]);
-
 		if(is_open == 1){
 			char[] cur_posTemp = new char[4];
 			char[] file_sizeTemp = new char[4];
@@ -922,15 +948,15 @@ public class FileSystem {
 				status = "Write failed, " + count + " exceeds maximum file length.";
 			}else{
 				for(int i = 0; i < count; i++){
-					if(file_size + i == 64){
+					if(cur_pos == 64){
 						switchBlock(index, 64);
-					}else if(file_size + i == 128){
+					}else if(cur_pos == 128){
 						switchBlock(index, 128);
 					}
-					oft[index][(cur_pos % 64) + i] = c;
+					oft[index][(cur_pos % 64)] = c;
+					cur_pos++;
 				}
 				file_size += count;
-				cur_pos += count;
 				file_sizeTemp = itc(file_size);
 				cur_posTemp = itc(cur_pos);
 				for(int i = 0; i < 4; i++){
@@ -948,7 +974,6 @@ public class FileSystem {
 	public String seek(int index, int pos){
 		String status = "";
 		int is_open = Character.getNumericValue(oft[index][67]);
-
 		if(is_open == 1){
 			char[] cur_posTemp = itc(pos);
 			char[] desc_indexTemp = new char[4];
@@ -999,6 +1024,22 @@ public class FileSystem {
 						oft[index][i + 72] = newBlock_noTemp[i];
 					}
 				}
+			}else{
+				char[] block_noTemp = new char[4];
+				for(int i = 0; i < 4; i++){
+					block_noTemp[i] = oft[index][68 + i];
+				}
+				int block_no = cti(block_noTemp);
+				io.write_block(block_no, oft[index]);
+				for(int i = 0; i < 4; i++){
+					block_noTemp[i] = desc_table[desc_block][desc_pos + i + 4];
+					oft[index][i + 68] = desc_table[desc_block][desc_pos + i + 4];
+				}
+				block_no = cti(block_noTemp);
+				char[] data = io.read_block(block_no);
+				for(int i = 0; i < 64; i++){
+					oft[index][i] = data[i];
+				}
 			}
 
 			for(int i = 0; i < 4; i++){
@@ -1039,13 +1080,12 @@ public class FileSystem {
 			char[] temp = new char[4];
 			for(int i = 0; i < directory.length; i++){
 				if(i % 8 == 0){
-					temp[(i % 8)] = directory[i];		temp[(i % 8) + 1] = directory[i + 1];
-					temp[(i % 8) + 2] = directory[i + 2];	temp[(i % 8) + 2] = directory[i + 3];
+					temp[(i % 8)] = directory[i];			temp[(i % 8) + 1] = directory[i + 1];
+					temp[(i % 8) + 2] = directory[i + 2];	temp[(i % 8) + 3] = directory[i + 3];
 					status += cts(temp);
 				}
 			}
 		}
-
 		return status;
 	}
 

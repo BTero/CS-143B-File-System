@@ -110,12 +110,13 @@ public class Shell {
 		try{
 			br = new BufferedReader(new FileReader(inFile));
 //			outFile = new FileOutputStream(studentID + ".txt");
-			outFile = new File("D:\\" + studentID + ".txt");
+			outFile = new File(studentID + ".txt");
+//			outFile = new File("D:\\" + studentID + ".txt");
 //			file = new File("F:\\" + studentID + ".txt");
 			fileData = new PrintStream(outFile);
 			
 			String line = br.readLine();
-			while(!line.isEmpty()){
+			while(line != null){
 				String[] s = line.split(" ");
 				if(s[0].equalsIgnoreCase("in")){
 					if(s.length == 2){
@@ -127,6 +128,7 @@ public class Shell {
 					}
 				}else if(s[0].equalsIgnoreCase("cr")){
 					if(s.length == 2){
+						System.out.println(s[1]);
 						create(s[1]);
 					}else{
 						fileData.println("File creation resulted in error.");
@@ -178,7 +180,7 @@ public class Shell {
 				}else{
 					fileData.println("Incorrect Command. Enter valid Command.");
 				}
-				
+				line = br.readLine();
 			}
 			
 			br.close();
@@ -190,46 +192,56 @@ public class Shell {
 
 	public void init(String restoreFile){
 		fs = new FileSystem(restoreFile);
+		if(fs.restored() == 1){
+			fileData.println("Disk restored.");
+		}else{
+			fileData.println("Disk restoration failed.");
+		}
 	}
 	
 	public void init(){
 		fs = new FileSystem();
+		if(fs.initialized() == 1){
+			fileData.println("Disk initialized.");
+		}else{
+			fileData.println("Disk initialization failed");
+		}
 	}
 
 	public void create(String name){
-		fs.create(name);
+		fileData.println(fs.create(name));
 	}
 
 	public void delete(String name){
-		fs.delete(name);
+		fileData.println(fs.delete(name));
 	}
 
 	public void open(String name){
-		fs.open(name);
+		fileData.println(fs.open(name));
 	}
 
 	public void close(String index){
-		fs.close(Integer.parseInt(index));
+		fileData.println(fs.close(Integer.parseInt(index)));
 	}
 
 	public void read(int index, int count){
-		fs.read(index, count);
+		fileData.println(fs.read(index, count));
 	}
 
 	public void write(int index, String c, int count){
 		// convert string to byte version before passing to manager
-		fs.write(index, c.charAt(0), count);
+		fileData.println(fs.write(index, c.charAt(0), count));
 	}
 
 	public void seek(int index, int pos){
-		fs.seek(index, pos);
+		fileData.println(fs.seek(index, pos));
 	}
 
 	public void directory(){
-		fs.directory();
+		fileData.println(fs.directory());
 	}
 
 	public void save(String fileName){
-		fs.save(fileName);
+		fileData.println(fs.save(fileName));
 	}
 }
