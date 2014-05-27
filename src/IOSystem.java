@@ -49,6 +49,7 @@ public class IOSystem {
 				for(int k = 0; k < s.length; k++){
 					ldisk[i][k] = s[k].charAt(0);
 				}
+				line = br.readLine();
 			}
 			br.close();
 		} catch (IOException e) {
