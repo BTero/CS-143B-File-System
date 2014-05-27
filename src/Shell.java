@@ -112,7 +112,7 @@ public class Shell {
 //			outFile = new FileOutputStream(studentID + ".txt");
 			outFile = new File(studentID + ".txt");
 //			outFile = new File("D:\\" + studentID + ".txt");
-//			file = new File("F:\\" + studentID + ".txt");
+//			outFile = new File("F:\\" + studentID + ".txt");
 			fileData = new PrintStream(outFile);
 			
 			String line = br.readLine();

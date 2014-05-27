@@ -78,6 +78,7 @@ public class IOSystem {
 	public void save(String out){
 		try{
 			outFile = new File(out);
+//			outFile = new File("F:\\" + out + "_" + studentID + ".txt");
 			fileData = new PrintStream(outFile);
 			for(int i = 0; i < L; i++){
 				for(int j = 0; j < B; j++){
