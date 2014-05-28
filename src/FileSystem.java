@@ -571,20 +571,22 @@ public class FileSystem {
 	public String create(String name){
 		String status = "";
 		// search directory if a file of the name already exists
-		int desc_index = searchDir(name);
-		if(desc_index == -1){			// file not found
+		int dir_index = searchDir(name);
+		if(dir_index == -1){			// file not found
 			// create file in directory and file descriptor and place it in the OFT entry
 			char[] cName = stc(name);
 			// search for a free file descriptor
-			desc_index = findDescriptor();
-			int dir_index = searchDir();
+			int desc_index = findDescriptor();
+			dir_index = searchDir();
 			char[] desc_temp = itc(desc_index);
 			int block_no = (desc_index / 4) + 1;
 			int pos = (desc_index % 4) * 16;
 			int oft_index = searchOFT();
 			int data_block = searchBitmap();
 
-			if(data_block == -1){
+			// Problem "creating" a file into the directory but not actually adding it to the file system
+			// Does adding the or statement truly fix the problem??
+			if(desc_index == -1 || descriptors == 23){
 				status = "Creation failed. No more logical blocks to allocate.";
 			}else{
 				char[] data_blockTemp = itc(data_block);
@@ -620,7 +622,7 @@ public class FileSystem {
 				descriptors++;
 				status = "File " + name + " created.";
 			}
-		}else if(desc_index == -2){
+		}else if(dir_index == -2){
 			// reached the end of directory, no more space to create a new file
 			status = "No more space in directory to fulfil file creation.";
 
@@ -873,19 +875,24 @@ public class FileSystem {
 	public String close(int index){
 		String status = "";
 		int is_open = Character.getNumericValue(oft[index][67]);
-
-		if(is_open == 1){
-			char[] block_noTemp = new char[4];
-			for(int i = 0; i < 4; i++){
-				block_noTemp[i] = oft[index][68 + i];
+		
+		if(index != 0){
+			if(is_open == 1){
+				char[] block_noTemp = new char[4];
+				for(int i = 0; i < 4; i++){
+					block_noTemp[i] = oft[index][68 + i];
+				}
+				int block_no = cti(block_noTemp);
+				io.write_block(block_no, oft[index]);
+				clearOFT(index);
+				status = "OFT entry at " + index + " closed.";
+			}else{
+				status = "OFT entry at " + index + " was not opened.";
 			}
-			int block_no = cti(block_noTemp);
-			io.write_block(block_no, oft[index]);
-			clearOFT(index);
-			status = "OFT entry at " + index + " closed.";
 		}else{
-			status = "OFT entry at " + index + " was not opened.";
+			status = "Trying to close directory OFT entry.";
 		}
+		
 		return status;
 	}
 
@@ -907,9 +914,9 @@ public class FileSystem {
 				status = "Read failed, " + count + " exceeds maximum file length.";
 			}else{
 				status = count + " bytes read: ";
-				for(int i = 0; i < 64; i++){
-					System.out.print(oft[index][i]);
-				}System.out.println();
+//				for(int i = 0; i < 64; i++){
+//					System.out.print(oft[index][i]);
+//				}System.out.println();
 				for(int i = 0; i < count; i++){
 					if(cur_pos == 64){
 						switchBlock(index, 64);
@@ -1083,6 +1090,7 @@ public class FileSystem {
 					temp[(i % 8)] = directory[i];			temp[(i % 8) + 1] = directory[i + 1];
 					temp[(i % 8) + 2] = directory[i + 2];	temp[(i % 8) + 3] = directory[i + 3];
 					status += cts(temp);
+					status += " ";
 				}
 			}
 		}
